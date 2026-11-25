@@ -1,6 +1,6 @@
 {
   "name": "uni-skybox",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A tiny standalone WebGL skybox viewer for uni-app (Vue2 / Vue3) H5 and WeChat Mini Program",
   "license": "MIT",
   "author": "zhouzheng123456 <zhou_163_zheng@163.com>",
@@ -49,6 +49,7 @@
     "assets": "node scripts/gen-assets.mjs",
     "size": "node bench/size.mjs",
     "bench": "node scripts/gen-assets.mjs && node bench/size.mjs && node scripts/serve.mjs . 5174",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {

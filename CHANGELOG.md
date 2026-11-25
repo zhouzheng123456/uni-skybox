@@ -5,7 +5,9 @@
 
 ## [Unreleased]
 
-目标版本 `0.2.0`。
+（暂无）
+
+## [0.2.0] - 2026-11-25
 
 ### 新增
 
@@ -39,5 +41,6 @@
 - H5 示例（`demo/`）：拖拽、滚轮缩放、快捷键、朝向提示，未放置贴图时回退到程序化贴图
 - 数学自检脚本（`npm run verify`）：覆盖相机朝向、三角形绕序、拖拽方向符号
 
-[Unreleased]: https://github.com/zhouzheng123456/uni-skybox/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/zhouzheng123456/uni-skybox/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/zhouzheng123456/uni-skybox/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/zhouzheng123456/uni-skybox/releases/tag/v0.1.0
