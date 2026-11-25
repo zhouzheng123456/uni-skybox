@@ -43,4 +43,11 @@ export interface ISkyboxOptions {
     clearColor?: [number, number, number, number];
     /** 透传给 canvas.getContext('webgl', attributes) */
     contextAttributes?: object;
+    /**
+     * 是否在多个实例之间共享立方体贴图，默认 true。
+     *
+     * 关闭后每个实例各自上传、各自释放（不共享），仅在基准测试的对照实验中
+     * 需要关闭；业务代码保持默认即可。
+     */
+    shareTexture?: boolean;
 }

@@ -29,6 +29,45 @@ const SAMPLER_STATE: Array<[string, string]> = [
     ['TEXTURE_MAG_FILTER', 'LINEAR'],
 ];
 
+/**
+ * 校验六面图像并返回贴图边长。
+ *
+ * 独立成函数的原因：资源池在创建纹理之前就需要边长来计算资源键，
+ * 若校验内嵌在 CubeTexture 里，就必须先上传才能拿到边长。
+ */
+export function resolveCubeSize(images: CubeImages): number {
+
+    let size = 0;
+
+    for (let i = 0; i < CUBE_FACES.length; i++) {
+
+        const face = CUBE_FACES[i];
+        const image = images && images[face];
+
+        if (!image || !image.width || !image.height) {
+            throw new Error(
+                `[uni-skybox] 缺少 ${face} 面贴图，或该图片尚未加载完成（宽高为 0）。`,
+            );
+        }
+
+        if (image.width !== image.height) {
+            throw new Error(
+                `[uni-skybox] ${face} 面贴图必须是正方形，当前为 ${image.width}x${image.height}。`,
+            );
+        }
+
+        if (size === 0) {
+            size = image.width;
+        } else if (size !== image.width) {
+            throw new Error(
+                `[uni-skybox] 六个面的贴图尺寸必须一致，${face} 面为 ${image.width}，其余为 ${size}。`,
+            );
+        }
+    }
+
+    return size;
+}
+
 export class CubeTexture {
 
     public readonly glTexture: WebGLTexture;
@@ -50,7 +89,7 @@ export class CubeTexture {
 
         const gl = this.gl;
 
-        this.size = this.validate(images);
+        this.size = resolveCubeSize(images);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.glTexture);
@@ -80,38 +119,5 @@ export class CubeTexture {
 
     public destroy(): void {
         this.gl.deleteTexture(this.glTexture);
-    }
-
-    private validate(images: CubeImages): number {
-
-        let size = 0;
-
-        for (let i = 0; i < CUBE_FACES.length; i++) {
-
-            const face = CUBE_FACES[i];
-            const image = images && images[face];
-
-            if (!image || !image.width || !image.height) {
-                throw new Error(
-                    `[uni-skybox] 缺少 ${face} 面贴图，或该图片尚未加载完成（宽高为 0）。`,
-                );
-            }
-
-            if (image.width !== image.height) {
-                throw new Error(
-                    `[uni-skybox] ${face} 面贴图必须是正方形，当前为 ${image.width}x${image.height}。`,
-                );
-            }
-
-            if (size === 0) {
-                size = image.width;
-            } else if (size !== image.width) {
-                throw new Error(
-                    `[uni-skybox] 六个面的贴图尺寸必须一致，${face} 面为 ${image.width}，其余为 ${size}。`,
-                );
-            }
-        }
-
-        return size;
     }
 }

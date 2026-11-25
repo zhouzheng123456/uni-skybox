@@ -1,5 +1,6 @@
 import { SkyCamera } from './camera/sky-camera';
 import { SkyboxRenderer } from './core/skybox-renderer';
+import { invalidatePool, restorePool } from './core/texture-pool';
 import { loadCubeImages } from './image/loader';
 import { cancelFrame, getDevicePixelRatio, requestFrame } from './platform';
 import { CubeImages, CubeImageUrls, ISkyboxCanvas, ISkyboxOptions } from './types';
@@ -36,6 +37,15 @@ export class SkyboxViewer {
     private frameHandle: any = null;
     private lastTime: number = 0;
 
+    /** 上下文是否处于丢失状态；为 true 时所有绘制与循环均不生效 */
+    private contextLost: boolean = false;
+
+    /** 丢失前是否处于渲染循环，恢复后据此自动续跑 */
+    private resumeAfterRestore: boolean = false;
+
+    /** 上下文丢失期间收到的贴图，恢复后再真正上传 */
+    private pendingImages: CubeImages = null;
+
     constructor(options: ISkyboxOptions) {
 
         const canvas = options && options.canvas;
@@ -69,9 +79,10 @@ export class SkyboxViewer {
         this.autoRotate = options.autoRotate || 0;
         this.clearColor = options.clearColor || [0, 0, 0, 1];
 
-        this.renderer = new SkyboxRenderer(gl);
+        this.renderer = new SkyboxRenderer(gl, options.shareTexture !== false);
 
         this.initViewport();
+        this.bindContextEvents();
 
         if (options.images) {
             this.setImages(options.images);
@@ -97,8 +108,19 @@ export class SkyboxViewer {
         return viewer.setImageUrls(urls).then(() => viewer);
     }
 
-    /** 传入已加载完成的六面贴图 */
+    /**
+     * 传入已加载完成的六面贴图。
+     *
+     * 上下文丢失期间不直接上传（此时任何 GL 调用都会失败），先记下来，
+     * 等 restored 事件到达后补上。
+     */
     public setImages(images: CubeImages): void {
+
+        if (this.contextLost) {
+            this.pendingImages = images;
+            return;
+        }
+
         this.renderer.setImages(images);
         this.render();
     }
@@ -154,7 +176,7 @@ export class SkyboxViewer {
 
     public render(): void {
 
-        if (this.destroyed) {
+        if (this.destroyed || this.contextLost) {
             return;
         }
 
@@ -170,7 +192,7 @@ export class SkyboxViewer {
 
     public start(): void {
 
-        if (this.running || this.destroyed) {
+        if (this.running || this.destroyed || this.contextLost) {
             return;
         }
 
@@ -202,8 +224,88 @@ export class SkyboxViewer {
 
         this.stop();
         this.destroyed = true;
+        this.pendingImages = null;
+        this.unbindContextEvents();
         this.renderer.destroy();
     }
+
+    /**
+     * 监听上下文丢失与恢复。
+     *
+     * 小程序画布节点未必实现事件模型，因此按能力探测绑定；浏览器下必须在
+     * 丢失事件里调用 preventDefault，否则浏览器不会尝试恢复上下文。
+     */
+    private bindContextEvents(): void {
+
+        const target: any = this.canvas;
+
+        if (!target || typeof target.addEventListener !== 'function') {
+            return;
+        }
+
+        target.addEventListener('webglcontextlost', this.onContextLost, false);
+        target.addEventListener('webglcontextrestored', this.onContextRestored, false);
+    }
+
+    private unbindContextEvents(): void {
+
+        const target: any = this.canvas;
+
+        if (!target || typeof target.removeEventListener !== 'function') {
+            return;
+        }
+
+        target.removeEventListener('webglcontextlost', this.onContextLost, false);
+        target.removeEventListener('webglcontextrestored', this.onContextRestored, false);
+    }
+
+    /** 上下文丢失：暂停循环、冻结资源描述；图像引用保留在资源池里供重建 */
+    private onContextLost = (event: any): void => {
+
+        if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+
+        this.contextLost = true;
+        this.resumeAfterRestore = this.running;
+
+        this.stop();
+
+        invalidatePool(this.gl);
+        this.renderer.forget();
+    };
+
+    /**
+     * 上下文恢复：按「纹理 → 程序与缓冲 → 视口 → 首帧」的顺序重建。
+     *
+     * 纹理必须先于绘制重建，否则首帧会因绑定空纹理而丢帧。
+     */
+    private onContextRestored = (): void => {
+
+        if (this.destroyed) {
+            return;
+        }
+
+        this.contextLost = false;
+
+        restorePool(this.gl);
+        this.renderer.restore();
+
+        // 丢失期间换过贴图：此时上下文已可用，补上最后一份，避免恢复后仍是旧图
+        if (this.pendingImages) {
+            const images = this.pendingImages;
+            this.pendingImages = null;
+            this.renderer.setImages(images);
+        }
+
+        this.initViewport();
+        this.render();
+
+        if (this.resumeAfterRestore) {
+            this.resumeAfterRestore = false;
+            this.start();
+        }
+    };
 
     private loop = (): void => {
 

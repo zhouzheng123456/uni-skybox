@@ -9,6 +9,7 @@ export {
     loadImage,
 } from './platform';
 export { CUBE_FACES } from './types';
+export { clearPool, poolStats } from './core/texture-pool';
 
 export type {
     CubeFace,
@@ -19,5 +20,6 @@ export type {
     ISkyboxOptions,
 } from './types';
 export type { IDragControlOptions } from './controls/drag-control';
+export type { IPoolStats } from './core/texture-pool';
 
 export { SkyboxViewer as default } from './skybox-viewer';

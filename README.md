@@ -7,7 +7,7 @@
 一个**独立天空盒渲染库**：零运行时依赖、TypeScript 编写、产物同时提供 ESM 与 UMD，
 可直接运行在 **uni-app (Vue2 / Vue3) 的 H5 与微信小程序**中（也适用于任何 WebGL1 环境）。
 
-约 950 行 TypeScript（含注释），只做一件事：把一个六面立方体贴图渲染成可自由环视的天空背景。
+约 1600 行 TypeScript（含注释，有效代码约 990 行），只做一件事：把一个六面立方体贴图渲染成可自由环视的天空背景。
 
 ![preview](./demo/preview.png)
 
@@ -20,6 +20,8 @@
 - **自动旋转**：`autoRotate`（度/秒），运行时修改立即生效
 - **视角控制**：`alpha`（偏航）/ `beta`（俯仰）/ `fov`（缩放）
 - **无全局单例**：不需要任何引擎或场景容器，同一页面可创建、销毁多个实例，路由切换不会互相污染
+- **纹理共享**：同一上下文内重复创建实例（路由切换、视口重建）时复用同一份立方体贴图，引用计数归零才真正 `deleteTexture`
+- **上下文丢失自恢复**：监听 `webglcontextlost` / `webglcontextrestored`，恢复时复用内存中已解码的图像重新上传，不重新下载、不重新解码，丢失前在渲染则自动续跑
 - **自动适配宿主环境**：`requestAnimationFrame`、`devicePixelRatio`、图片创建方式内部自动选择
 - **WebGL1**：兼容性最好，`CLAMP_TO_EDGE + LINEAR` 下支持非 2 次幂贴图，不强制 mipmap
 
@@ -533,6 +535,7 @@ function destroy() {
 | `autoRotate` | `number` | `0` | 自动旋转速度（度/秒） |
 | `clearColor` | `[r, g, b, a]` | `[0,0,0,1]` | 清屏颜色，0~1 浮点 |
 | `contextAttributes` | `object` | - | 透传 `canvas.getContext('webgl', attrs)` |
+| `shareTexture` | `boolean` | `true` | 是否在同一 WebGL 上下文内共享立方体贴图；仅基准对照实验需要关闭 |
 
 实例成员：
 
@@ -551,6 +554,10 @@ function destroy() {
 | `destroy()` | 释放 program / buffer / texture 并停止循环 |
 | `camera` | `SkyCamera`，可直接改 `alpha` / `beta` / `fov` |
 | `gl` / `canvas` | 暴露原生上下文，便于二次开发 |
+
+上下文丢失不需要宿主额外处理：丢失时内部会 `preventDefault()` 并暂停循环，恢复事件到达后按
+「纹理 → program 与顶点缓冲 → 视口 → 首帧」的顺序重建，丢失前若在渲染则自动续跑。
+小程序画布节点没有事件模型时（无 `addEventListener`）会跳过绑定，行为与 0.1.0 一致。
 
 ### `new DragControl(viewer, options)`
 
@@ -573,8 +580,12 @@ import {
   getDevicePixelRatio,  // () => number
   isMiniProgramCanvas,  // (canvas) => boolean
   CUBE_FACES,           // ['front', 'back', 'left', 'right', 'top', 'bottom']
+  poolStats,            // (gl) => { entries, liveTextures, bytes }，纹理池观测
+  clearPool,            // (gl) => void，清空池并释放纹理，仅测试/热更新用
 } from 'uni-skybox';
 ```
+
+`poolStats()` 中的 `bytes` 按 `6 × 边长² × 4 字节` 估算，浏览器没有读取显存的接口。
 
 ## 朝向约定
 
@@ -600,6 +611,11 @@ import {
 - 小程序里用网络图片作为 `canvas.createImage()` 的 `src`，需要把域名加入 **downloadFile 合法域名**
 - 浏览器跨域图片需要服务端返回 CORS 头，否则 `texImage2D` 会因安全限制失败
 - 贴图建议 ≤ 2048，六张 2048 的 RGBA 贴图在低端机上已接近显存上限
+- **纹理不能跨 WebGL 上下文共享**：资源池以图形上下文为隔离单位。复用同一个 canvas 的实例之间才能共享贴图，
+  不同 canvas 天然是两个上下文，各自持有一份纹理——这是 WebGL 规范限制，不是实现取舍
+- 上下文恢复依赖 `webglcontextrestored` 事件。部分浏览器（实测 Chrome/ANGLE）在丢失事件的同一任务里
+  立刻调用 `restoreContext()` 时可能不再派发该事件；这属于宿主调用方式问题，本库无法代为触发，基准页因此
+  延迟 120 ms 再请求恢复并带超时重试
 
 ## 开发
 
@@ -609,7 +625,12 @@ npm run build      # tsc 产出 ESM + d.ts，rollup 合并出 ESM / UMD 单文�
 npm run typecheck  # 只做类型检查
 npm run verify     # 构建并跑数学自检（相机朝向、绕序、拖拽符号）
 npm run demo       # 启动本地静态服务，打开 http://localhost:5173/demo/
+npm run bench      # 生成基准贴图 + 统计产物体积 + 起服务，打开 http://localhost:5174/bench/
 ```
+
+`npm run size` 单独统计产物体积（原始 / gzip / brotli）与源码规模，`npm run assets` 单独生成
+`bench/assets/` 下的六面 PNG。基准页的用法、各表与论文的对应关系、以及实测踩到的坑，见
+[`bench/README.md`](./bench/README.md)。
 
 demo **不附带任何第三方贴图**：它会先尝试加载 `demo/assets/` 下的
 `front` / `back` / `left` / `right` / `top` / `bottom` 六张同名图片（`.png`，可选 `.webp`），
@@ -634,10 +655,11 @@ demo **不附带任何第三方贴图**：它会先尝试加载 `demo/assets/` �
 
 ```
 src/
-├─ skybox-viewer.ts      # 对外主类：生命周期、渲染循环、resize
+├─ skybox-viewer.ts      # 对外主类：生命周期、渲染循环、resize、上下文丢失/恢复
 ├─ camera/sky-camera.ts  # 球坐标相机
 ├─ core/
 │  ├─ skybox-renderer.ts # 绘制流程
+│  ├─ texture-pool.ts    # 立方体贴图资源池（引用计数 + 上下文隔离 + 恢复重建）
 │  ├─ cube-geometry.ts   # 36 顶点立方体
 │  ├─ cube-texture.ts    # 立方体贴图上传
 │  └─ gl-program.ts      # program/uniform 封装
@@ -647,6 +669,9 @@ src/
 ├─ math/mat4.ts
 ├─ shaders/index.ts
 └─ types.ts
+
+bench/                   # 基准采集：体积脚本 + 浏览器采集页 + 说明
+scripts/gen-assets.mjs   # 零依赖生成基准用的六面 PNG
 ```
 
 ## 贡献

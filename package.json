@@ -46,6 +46,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "verify": "npm run build && node scripts/verify-math.mjs",
     "demo": "node scripts/serve.mjs",
+    "assets": "node scripts/gen-assets.mjs",
+    "size": "node bench/size.mjs",
+    "bench": "node scripts/gen-assets.mjs && node bench/size.mjs && node scripts/serve.mjs . 5174",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
