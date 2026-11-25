@@ -1,0 +1,55 @@
+{
+  "name": "uni-skybox",
+  "version": "0.1.0",
+  "description": "A tiny standalone WebGL skybox viewer for uni-app (Vue2 / Vue3) H5 and WeChat Mini Program",
+  "license": "MIT",
+  "author": "zhouzheng123456 <zhou_163_zheng@163.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhouzheng123456/uni-skybox.git"
+  },
+  "homepage": "https://github.com/zhouzheng123456/uni-skybox#readme",
+  "bugs": {
+    "url": "https://github.com/zhouzheng123456/uni-skybox/issues"
+  },
+  "keywords": [
+    "skybox",
+    "webgl",
+    "uniapp",
+    "miniprogram",
+    "wechat",
+    "cubemap",
+    "panorama"
+  ],
+  "main": "dist/uni-skybox.umd.js",
+  "module": "dist/uni-skybox.esm.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/uni-skybox.esm.js",
+      "require": "./dist/uni-skybox.umd.js",
+      "default": "./dist/uni-skybox.umd.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && rollup -c rollup.config.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "verify": "npm run build && node scripts/verify-math.mjs",
+    "demo": "node scripts/serve.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "rollup": "^4.9.0",
+    "typescript": "^5.3.0"
+  }
+}

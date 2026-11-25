@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#05070a">
+    <meta name="description" content="uni-skybox 示例：六面立方体贴图天空盒，可拖拽环视与自动旋转">
+    <title>uni-skybox demo · 六面贴图天空盒</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+            color: rgba(255, 255, 255, 0.88);
+        }
+
+        #stage {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        #skybox {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            touch-action: none;
+        }
+
+        .panel {
+            background: rgba(8, 12, 18, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            pointer-events: none;
+        }
+
+        .brand {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            padding: 10px 14px;
+            font-size: 12px;
+            line-height: 1.6;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+        }
+
+        .brand strong {
+            display: block;
+            font-size: 14px;
+            letter-spacing: 0.3px;
+            color: #fff;
+        }
+
+        .brand span {
+            color: rgba(255, 255, 255, 0.55);
+        }
+
+        .hud {
+            position: absolute;
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            padding: 10px 14px;
+            font-size: 12px;
+            line-height: 1.8;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+        }
+
+        .keys {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        kbd {
+            display: inline-block;
+            padding: 0 5px;
+            margin-right: 2px;
+            font-family: inherit;
+            font-size: 11px;
+            line-height: 17px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.14);
+            border-radius: 4px;
+        }
+
+        #status {
+            margin-top: 4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 11.5px;
+            color: #7fd4ff;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        #overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 0 24px;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.8);
+            background: radial-gradient(circle at 50% 45%, #16202c, #05070a 72%);
+            transition: opacity 0.35s ease;
+        }
+
+        #overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #overlay.error {
+            color: #ff8a80;
+        }
+
+        #overlay.error .spinner {
+            display: none;
+        }
+
+        .spinner {
+            width: 26px;
+            height: 26px;
+            border: 2px solid rgba(255, 255, 255, 0.16);
+            border-top-color: #7fd4ff;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="stage">
+        <canvas id="skybox"></canvas>
+
+        <div class="brand panel">
+            <strong>uni-skybox</strong>
+            <span id="asset-info">六面立方体贴图 · 加载中…</span>
+        </div>
+
+        <div class="hud panel">
+            <div class="keys">
+                <span><kbd>拖拽</kbd>旋转视角</span>
+                <span><kbd>滚轮</kbd>缩放</span>
+                <span><kbd>空格</kbd>暂停 / 继续自动旋转</span>
+                <span><kbd>1</kbd>–<kbd>6</kbd>跳到六面</span>
+                <span><kbd>R</kbd>重置视角</span>
+            </div>
+            <div id="status">initializing…</div>
+        </div>
+
+        <div id="overlay">
+            <div class="spinner"></div>
+            <div id="overlay-text">正在准备…</div>
+        </div>
+    </div>
+
+    <script src="../dist/uni-skybox.umd.js"></script>
+    <script src="./demo.js"></script>
+</body>
+
+</html>
