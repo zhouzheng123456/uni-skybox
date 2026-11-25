@@ -1,5 +1,6 @@
 # uni-skybox
 
+[![npm](https://img.shields.io/npm/v/uni-skybox.svg)](https://www.npmjs.com/package/uni-skybox)
 [![CI](https://github.com/zhouzheng123456/uni-skybox/actions/workflows/ci.yml/badge.svg)](https://github.com/zhouzheng123456/uni-skybox/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
